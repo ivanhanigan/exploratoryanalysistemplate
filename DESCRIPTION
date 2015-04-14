@@ -1,0 +1,11 @@
+Package: ExploratoryAnalysisTemplate
+Type: Package
+Title: eda
+Version: 1.0
+Date: 2015-04-11
+Author: ivanhanigan
+Maintainer: <ivan.hanigan@gmail.com>
+Description: EDA
+Depends: sqldf, taxize
+License: GPL (>= 2)
+

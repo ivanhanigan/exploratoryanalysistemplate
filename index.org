@@ -1,3 +1,121 @@
+#+TITLE:exploratory analysis template 
+#+AUTHOR: Ivan Hanigan
+#+email: ivan.hanigan@anu.edu.au
+#+LaTeX_CLASS: article
+#+LaTeX_CLASS_OPTIONS: [a4paper]
+#+LATEX: \tableofcontents
+-----
+* Introduction
+This is designed to create code snippets.  These can be used as standalone R scripts or incorporated into complicated workflows such as ProjectTemplage.
+* R
+** exploratory_analysis_template
+*** exploratory_analysis_template
+#+name:exploratory_analysis_template
+#+begin_src R :session *R* :tangle R/exploratory_analysis_template.r :exports none :eval no
+  ################################################################
+  exploratory_analysis_template <- function(
+      projdir = ""
+    ,
+      packagedir =  ""
+    ,
+      outfile = ""
+    ,
+      indir = ""
+    ,
+      infile = ""
+    ,
+      titl = ""
+    ,
+      show_header = T
+    ,
+      show_geo = T  
+      ){
+    
+  txt <- taxonomic_template(target_col = "species")
+  if(show_header){
+  hd <- sprintf('
+  %s
+  ---
+  
+  ```{r echo = T, results = "asis", eval = T}
+  projdir <- "%s"
+  outdir <- file.path(projdir, "%s")
+  # if(!file.exists(outdir)) dir.create(outdir)
+  outfile <- "%s"
+  file.path(outdir, outfile) 
+  setwd(outdir)
+  ```
+  ```{r, echo = TRUE, eval = FALSE}
+  library(gdata)
+  library(disentangle)
+  library(EML)
+  library(sqldf)
+  library(taxize)
+  indir <- "%s"
+  
+  dir(indir)
+  infile <- "%s"
+  
+  #### load ####
+  print(file.path(indir,infile))
+  dat <- read.csv(file.path(indir,infile), stringsAsFactors = F)
+    
+  #### check ####
+  str(dat)
+  
+  head(dat) 
+  tail(dat)
+  ```
+  ', titl, projdir, packagedir, outfile, indir, infile
+  )
+  txt <- paste(hd, txt) 
+  }
+  
+  # cat(txt)
+  
+  return(txt)
+  }
+    
+#+end_src
+*** test-exploratory_analysis_template
+#+name:exploratory_analysis_template
+#+begin_src R :session *R* :tangle tests/test-exploratory_analysis_template.r :exports none :eval no
+  ################################################################
+  # name:exploratory_analysis_template
+  library(devtools)
+  load_all()
+  textdata <- exploratory_analysis_template(
+    projdir = "~/tools/exploratory_analysis_template"
+  ,
+    packagedir =  "tests"
+  ,
+    outfile = "test_eda.csv"
+  ,
+    indir = "~/tools/exploratory_analysis_template/inst/extdata"
+  ,
+    infile = "taxonomic_dummy_data.csv"
+  ,
+    titl = "Testing taxonomic review code snippet"
+  ,
+    show_header = T
+  ,
+    show_geo = F
+    )
+  cat(textdata)
+  # check the codes, if ok sink to a r markdown script
+  sink("tests/test_taxo_review.Rmd")
+  cat(textdata)
+  sink()
+  
+#+end_src
+*** man-exploratory_analysis_template
+#+name:exploratory_analysis_template
+#+begin_src R :session *R* :tangle no :exports none :eval no
+################################################################
+# name:exploratory_analysis_template
+
+#+end_src
+
 ** taxonomic_review_template
 *** R-taxonomic_review_template
 #+name:taxonomic_review_template
@@ -8,11 +126,7 @@
   taxonomic_template <- function(target_col = "species"){
     
   txt <- paste('
-  library(taxize)
-  library(sqldf)
-  outdir <- "."
-  outfile <- "test.csv"
-  
+  ```{r echo = T, results = "asis", eval = F}
   #### Taxonomic review ####
   tx <- as.data.frame(table(dat$',target_col,'))
   names(tx) <- c("',target_col,'", "Frequency")
@@ -40,7 +154,11 @@
   out3[which(out3$submitted_name == out3$match_via_database),"match_via_database"] <- ""
   out3
   write.csv(out3, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
-  
+  #### TODO: 
+  # you should go to this CSV file and edit the final columns, 
+  # take notes on decisions and create the updates list.  Save as new file with 2.csv at end.
+  ####
+
   # Post review merge fixed names and remove old names
   dir(outdir)
   tx_file <- "xxx_taxonomic_coverage2.csv"
@@ -69,6 +187,7 @@
   dat <- dat[,namelist]
   names(dat) <- gsub("update_to" , "',target_col,'", names(dat))
   str(dat)  
+  ```
   ', sep = "")
   #cat(txt)
   return(txt)
@@ -95,7 +214,7 @@
   # some species data:
   dat <- data.frame("species" = I(c("Bryum schleicheri", "Bryum capillare", "Bryum argentum", "Escherichia coli", "Glis glis")))
   dat$index = 1:nrow(dat)
-  dat
+  write.csv(dat, "inst/extdata/taxonomic_dummy_data.csv", row.names=F)
   source("R/taxonomic_review_template.r")
   txt <- taxonomic_template()
   #  sink("test.r")

@@ -1,19 +1,46 @@
 
-################################################################
-# name:taxonomic_review_template
+Testing taxonomic review code snippet
+---
 
-taxonomic_template <- function(target_col = "species"){
+```{r echo = T, results = "asis", eval = T}
+projdir <- "~/tools/exploratory_analysis_template"
+outdir <- file.path(projdir, "tests")
+# if(!file.exists(outdir)) dir.create(outdir)
+outfile <- "test_eda.csv"
+file.path(outdir, outfile) 
+setwd(outdir)
+```
+```{r, echo = TRUE, eval = FALSE}
+library(gdata)
+library(disentangle)
+library(EML)
+library(sqldf)
+library(taxize)
+indir <- "~/tools/exploratory_analysis_template/inst/extdata"
+
+dir(indir)
+infile <- "taxonomic_dummy_data.csv"
+
+#### load ####
+print(file.path(indir,infile))
+dat <- read.csv(file.path(indir,infile), stringsAsFactors = F)
   
-txt <- paste('
+#### check ####
+str(dat)
+
+head(dat) 
+tail(dat)
+```
+ 
 ```{r echo = T, results = "asis", eval = F}
 #### Taxonomic review ####
-tx <- as.data.frame(table(dat$',target_col,'))
-names(tx) <- c("',target_col,'", "Frequency")
+tx <- as.data.frame(table(dat$species))
+names(tx) <- c("species", "Frequency")
 write.csv(tx, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
 # Test new version?
-tx <- as.data.frame(table(dat$',target_col,'))
-names(tx) <- c("',target_col,'", "Frequency")
-splist <- tx$',target_col,'
+tx <- as.data.frame(table(dat$species))
+names(tx) <- c("species", "Frequency")
+splist <- tx$species
 sources <- gnr_datasources()
 sources
 
@@ -24,11 +51,11 @@ zk <- sources$id[sources$title == "ZooKeys"]
 zb <- sources$id[sources$title == "ZooBank"]
 c(eol, gbif_backbone, ipni, zk, zb)
 out <- gnr_resolve(splist, data_source_ids=c(eol, gbif_backbone, ipni, zk, zb), stripauthority=TRUE)
-
+#out
 out2 <- unique(out$results)
-out3 <- sqldf(\'select submitted_name, matched_name2 as match_via_database, max(score) as max_database_score, "" as change_note, "" as update_to
+out3 <- sqldf('select submitted_name, matched_name2 as match_via_database, max(score) as max_database_score, "" as change_note, "" as update_to
   from out2
-  group by submitted_name, matched_name2\')
+  group by submitted_name, matched_name2')
 out3[which(out3$submitted_name == out3$match_via_database),"max_database_score"] <- ""
 out3[which(out3$submitted_name == out3$match_via_database),"match_via_database"] <- ""
 out3
@@ -40,7 +67,7 @@ write.csv(out3, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile
 
 # Post review merge fixed names and remove old names
 dir(outdir)
-tx_file <- "xxx_taxonomic_coverage2.csv"
+tx_file <- "test_eda_taxonomic_coverage.csv"     
 tx <- read.csv(file.path(outdir, tx_file), stringsAsFactor = F)
 nrow(tx)
 head(tx)
@@ -48,27 +75,23 @@ tx[tx[,grep("change_note", names(tx))]!="",]
 str(dat)
 
 # check that linking variable is identical
-idx <- names(table(dat$',target_col,'))
+idx <- names(table(dat$species))
 head(idx)
 idy <- tx$submitted_name
 head(idy)
-idx[-which(idx in idy)]
-idy[-which(idy in idx)]
+idx[-which(idx %in% idy)]
+idy[-which(idy %in% idx)]
 
 # if all good then merge
-dat <- merge(dat, tx, by.x = "',target_col,'", by.y = "submitted_name", all.x = T)
+dat <- merge(dat, tx, by.x = "species", by.y = "submitted_name", all.x = T)
 str(dat)
-
+dat
 # reorder cols
-paste(names(dat), collapse = "\',\'", sep = "")
-namelist <- c("visitcode","surveyyear", "',target_col,'")
+paste(names(dat), collapse = "','", sep = "")
+namelist <- c("update_to", "index")
 
 dat <- dat[,namelist]
-names(dat) <- gsub("update_to" , "',target_col,'", names(dat))
-str(dat)  
+names(dat) <- gsub("update_to" , "species", names(dat))
+str(dat)
+dat
 ```
-', sep = "")
-#cat(txt)
-return(txt)
-
-}
