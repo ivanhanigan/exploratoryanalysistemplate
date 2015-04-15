@@ -30,45 +30,12 @@ This is designed to create code snippets.  These can be used as standalone R scr
     ,
       show_geo = T  
       ){
-    
-  txt <- taxonomic_template(target_col = "species")
+  txt1 <- cleaning_template(datevar = "date")  
+  txt2 <- taxonomic_template(target_col = "species")
+  txt <- paste(txt1, txt2)
   if(show_header){
-  hd <- sprintf('
-  %s
-  ---
-  
-  ```{r echo = T, results = "asis", eval = T}
-  projdir <- "%s"
-  outdir <- file.path(projdir, "%s")
-  # if(!file.exists(outdir)) dir.create(outdir)
-  outfile <- "%s"
-  file.path(outdir, outfile) 
-  setwd(outdir)
-  ```
-  ```{r, echo = TRUE, eval = FALSE}
-  library(gdata)
-  library(disentangle)
-  library(EML)
-  library(sqldf)
-  library(taxize)
-  indir <- "%s"
-  
-  dir(indir)
-  infile <- "%s"
-  
-  #### load ####
-  print(file.path(indir,infile))
-  dat <- read.csv(file.path(indir,infile), stringsAsFactors = F)
-    
-  #### check ####
-  str(dat)
-  
-  head(dat) 
-  tail(dat)
-  ```
-  ', titl, projdir, packagedir, outfile, indir, infile
-  )
-  txt <- paste(hd, txt) 
+    hd <- header_template(titl=titl, projdir=projdir, packagedir=packagedir, outfile=outdir, indir=indir, infile=infile)
+    txt <- paste(hd, txt) 
   }
   
   # cat(txt)
@@ -107,12 +74,129 @@ This is designed to create code snippets.  These can be used as standalone R scr
   cat(textdata)
   sink()
   
+      textdata <- exploratory_analysis_template(
+        projdir = "~/path/to/project",
+        packagedir =  "a_package_is_a_discrete_chunk_of_work",
+        outfile = "this_is_the_result.csv",
+        indir = "~/path/to/input/data",
+        infile = "this_is_the_input_data.csv",
+        titl = "Title of the code snippet",
+        show_header = TRUE)
+      cat(textdata)
 #+end_src
 *** man-exploratory_analysis_template
 #+name:exploratory_analysis_template
 #+begin_src R :session *R* :tangle no :exports none :eval no
 ################################################################
 # name:exploratory_analysis_template
+
+#+end_src
+** header_template
+*** R-header_template
+#+name:header_template
+#+begin_src R :session *R* :tangle R/header_template.r :exports none :eval no
+  ################################################################
+  header_template <- function(titl, projdir, packagedir, outfile, indir, infile){
+  hd <- sprintf('
+  %s
+  ---
+  
+  ```{r echo = T, results = "asis", eval = T}
+  projdir <- "%s"
+  outdir <- file.path(projdir, "%s")
+  # if(!file.exists(outdir)) dir.create(outdir)
+  outfile <- "%s"
+  file.path(outdir, outfile) 
+  setwd(outdir)
+  ```
+  ```{r, echo = TRUE, eval = FALSE}
+  library(gdata)
+  library(disentangle)
+  library(EML)
+  library(sqldf)
+  library(taxize)
+  indir <- "%s"
+  
+  dir(indir)
+  infile <- "%s"
+  
+  #### load ####
+  print(file.path(indir,infile))
+  dat <- read.csv(file.path(indir,infile), stringsAsFactors = F)
+    
+  #### check ####
+  str(dat)
+  
+  head(dat) 
+  tail(dat)
+  ```
+  ', titl, projdir, packagedir, outfile, indir, infile
+  )
+  return(hd)
+  }
+#+end_src
+*** test-header_template
+#+name:header_template
+#+begin_src R :session *R* :tangle tests/test-header_template.r :exports none :eval no
+################################################################
+# name:header_template
+
+#+end_src
+*** man-header_template
+#+name:header_template
+#+begin_src R :session *R* :tangle no :exports none :eval no
+################################################################
+# name:header_template
+
+#+end_src
+
+** cleaning_template
+*** R-cleaning_template
+#+name:cleaning_template
+#+begin_src R :session *R* :tangle R/cleaning_template.r :exports none :eval no
+  ################################################################
+  cleaning_template <- function(datevar = "date"){
+  txt <- paste('
+  ```{r echo = T, results = "asis", eval = F}
+  #### clean ####
+  names(dat) <- lcu(names(dat))    
+  ## Dates
+  # If you see a date variable need to change it (R reads CSV dates as text)
+  # to first test the conversion just do one
+  dat$',datevar,'[1]        
+  as.Date(dat$',datevar,'[1], format = "%d/%m/%Y")
+  # if that worked then do the whole vector
+  dat$',datevar,' <- as.Date(dat$',datevar,', format = "%d/%m/%Y")
+  table(dat$',datevar,')
+  ## nominal variables coded with integers
+  # these can be coerced to character
+  for(i in c("pqplot", "row", "column")){
+    print(table(dat[,i]))
+    dat[,i] <- as.character(dat[,i])
+  }
+  ## Species is a reserved word only allowed for lists of proper names
+  # otherwise we use descriptor
+  names(dat) <- gsub("species", "fauna_descriptor", names(dat))
+  str(dat)
+  ```', sep = '')
+  return(txt)
+  }
+  
+#+end_src
+*** test-cleaning_template
+#+name:cleaning_template
+#+begin_src R :session *R* :tangle tests/test-cleaning_template.r :exports none :eval no
+  ################################################################
+  # name:cleaning_template
+  source("R/cleaning_template.r")
+  txt <- cleaning_template()
+  cat(txt)
+#+end_src
+*** man-cleaning_template
+#+name:cleaning_template
+#+begin_src R :session *R* :tangle no :exports none :eval no
+################################################################
+# name:cleaning_template
 
 #+end_src
 
@@ -128,22 +212,24 @@ This is designed to create code snippets.  These can be used as standalone R scr
   txt <- paste('
   ```{r echo = T, results = "asis", eval = F}
   #### Taxonomic review ####
-  tx <- as.data.frame(table(dat$',target_col,'))
-  names(tx) <- c("',target_col,'", "Frequency")
-  write.csv(tx, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
-  # Test new version?
+  ## to just simply summarise the species names
+  # tx <- as.data.frame(table(dat$',target_col,'))
+  # names(tx) <- c("',target_col,'", "Frequency")
+  # write.csv(tx, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
+  ## to use taxize to check the list do the following 
   tx <- as.data.frame(table(dat$',target_col,'))
   names(tx) <- c("',target_col,'", "Frequency")
   splist <- tx$',target_col,'
   sources <- gnr_datasources()
-  sources
-  
+  #sources
+  ## the following lists have been selected as likely to be reasonable in australia
   eol <- sources$id[sources$title == "EOL"]
   gbif_backbone <- sources$id[sources$title == "GBIF Backbone Taxonomy"]
   ipni <- sources$id[sources$title == "The International Plant Names Index"]
   zk <- sources$id[sources$title == "ZooKeys"]
   zb <- sources$id[sources$title == "ZooBank"]
-  c(eol, gbif_backbone, ipni, zk, zb)
+  #c(eol, gbif_backbone, ipni, zk, zb)
+  ## this next big uses the internet to check lists
   out <- gnr_resolve(splist, data_source_ids=c(eol, gbif_backbone, ipni, zk, zb), stripauthority=TRUE)
   
   out2 <- unique(out$results)
@@ -153,15 +239,17 @@ This is designed to create code snippets.  These can be used as standalone R scr
   out3[which(out3$submitted_name == out3$match_via_database),"max_database_score"] <- ""
   out3[which(out3$submitted_name == out3$match_via_database),"match_via_database"] <- ""
   out3
-  write.csv(out3, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
+  ## write out the result for clerical review
+  tx_file <- gsub(".csv","_taxonomic_coverage.csv", outfile)
+  write.csv(out3, file.path(outdir, tx_file), row.names = F)  
   #### TODO: 
   # you should go to this CSV file and edit the final columns, 
-  # take notes on decisions and create the updates list.  Save as new file with 2.csv at end.
+  # take notes on decisions and create the updates list.  Save.
   ####
-
+  
   # Post review merge fixed names and remove old names
+  # check the tx file is there, appropriately named
   dir(outdir)
-  tx_file <- "xxx_taxonomic_coverage2.csv"
   tx <- read.csv(file.path(outdir, tx_file), stringsAsFactor = F)
   nrow(tx)
   head(tx)
@@ -169,18 +257,31 @@ This is designed to create code snippets.  These can be used as standalone R scr
   str(dat)
   
   # check that linking variable is identical
-  idx <- names(table(dat$',target_col,'))
+  # there are a variety of reasons why these may have gotten out of sync during the clerical review
+  idx <- as.data.frame(names(table(dat$",target_col,")))
+  names(idx) <- "v1"
   head(idx)
-  idy <- tx$submitted_name
+  idy <- as.data.frame(tx$submitted_name)
+  names(idy) <- "v1"
   head(idy)
-  idx[-which(idx in idy)]
-  idy[-which(idy in idx)]
+  # which target do not appear in source
+  sqldf("select *
+  from idx
+  left join idy
+  on idx.v1 = idy.v1
+  where idy.v1 is null")
+  # which source do not appear in target
+  sqldf("select *
+  from idy
+  left join idx
+  on idy.v1 = idx.v1
+  where idx.v1 is null")
   
   # if all good then merge
   dat <- merge(dat, tx, by.x = "',target_col,'", by.y = "submitted_name", all.x = T)
   str(dat)
   
-  # reorder cols
+  # reorder cols (col names need to be changed)
   paste(names(dat), collapse = "\',\'", sep = "")
   namelist <- c("visitcode","surveyyear", "',target_col,'")
   
@@ -214,7 +315,7 @@ This is designed to create code snippets.  These can be used as standalone R scr
   # some species data:
   dat <- data.frame("species" = I(c("Bryum schleicheri", "Bryum capillare", "Bryum argentum", "Escherichia coli", "Glis glis")))
   dat$index = 1:nrow(dat)
-  write.csv(dat, "inst/extdata/taxonomic_dummy_data.csv", row.names=F)
+  #write.csv(dat, "inst/extdata/taxonomic_dummy_data.csv", row.names=F)
   source("R/taxonomic_review_template.r")
   txt <- taxonomic_template()
   #  sink("test.r")
@@ -224,13 +325,14 @@ This is designed to create code snippets.  These can be used as standalone R scr
   
   library(taxize)
   library(sqldf)
+  getwd()
   outdir <- "."
   outfile <- "test.csv"
   
   #### Taxonomic review ####
   tx <- as.data.frame(table(dat$species))
   names(tx) <- c("species", "Frequency")
-  write.csv(tx, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
+  #write.csv(tx, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
   # Test new version?
   tx <- as.data.frame(table(dat$species))
   names(tx) <- c("species", "Frequency")
@@ -253,24 +355,38 @@ This is designed to create code snippets.  These can be used as standalone R scr
   out3[which(out3$submitted_name == out3$match_via_database),"max_database_score"] <- ""
   out3[which(out3$submitted_name == out3$match_via_database),"match_via_database"] <- ""
   out3
-  write.csv(out3, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
+  #write.csv(out3, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
   
   # Post review merge fixed names and remove old names
-  dir(outdir)
-  tx_file <- "test_taxonomic_coverage.csv"
-  tx <- read.csv(file.path(outdir, tx_file), stringsAsFactor = F)
+  dir(file.path(outdir, "tests"))
+  tx_file <- "test_eda_taxonomic_coverage.csv"
+  tx <- read.csv(file.path(outdir, "tests", tx_file), stringsAsFactor = F)
   nrow(tx)
   head(tx)
   tx[tx[,grep("change_note", names(tx))]!="",]                                          
   str(dat)
   
   # check that linking variable is identical
-  idx <- names(table(dat$species))
+  idx <- as.data.frame(names(table(dat$species)))
+  names(idx) <- "v1"
   head(idx)
-  idy <- tx$submitted_name
+  idy <- as.data.frame(tx$submitted_name)
+  names(idy) <- "v1"
   head(idy)
-  idx[-which(idx %in% idy)]
-  idy[-which(idy %in% idx)]
+  # which target do not appear in source
+  #idx[-which(idx %in% idy)]
+  sqldf("select *
+  from idx
+  left join idy
+  on idx.v1 = idy.v1
+  where idy.v1 is null")
+  # which source do not appear in target
+  #idy[-which(idy %in% idx)]
+  sqldf("select *
+  from idy
+  left join idx
+  on idy.v1 = idx.v1
+  where idx.v1 is null")
   
   # if all good then merge
   dat <- merge(dat, tx, by.x = "species", by.y = "submitted_name", all.x = T)

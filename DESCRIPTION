@@ -6,6 +6,6 @@ Date: 2015-04-11
 Author: ivanhanigan
 Maintainer: <ivan.hanigan@gmail.com>
 Description: EDA
-Depends: sqldf, taxize
+Suggests: sqldf, taxize, EML, gdata
 License: GPL (>= 2)
 
