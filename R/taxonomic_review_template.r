@@ -3,20 +3,22 @@
 # name:taxonomic_review_template
 
 taxonomic_template <- function(target_col = "species"){
-  
+#  ```{r echo = T, results = "asis", eval = F}    
 txt <- paste('
-```{r echo = T, results = "asis", eval = F}
+
 #### Taxonomic review ####
-## to just simply summarise the species names
+## If you just want simply summarise the species names
 # tx <- as.data.frame(table(dat$',target_col,'))
 # names(tx) <- c("',target_col,'", "Frequency")
 # write.csv(tx, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
-## to use taxize to check the list do the following 
+
+## Alternately to use taxize to check the list do the following 
 tx <- as.data.frame(table(dat$',target_col,'))
 names(tx) <- c("',target_col,'", "Frequency")
 splist <- tx$',target_col,'
 sources <- gnr_datasources()
 #sources
+
 ## the following lists have been selected as likely to be reasonable in australia
 eol <- sources$id[sources$title == "EOL"]
 gbif_backbone <- sources$id[sources$title == "GBIF Backbone Taxonomy"]
@@ -37,6 +39,7 @@ out3
 ## write out the result for clerical review
 tx_file <- gsub(".csv","_taxonomic_coverage.csv", outfile)
 write.csv(out3, file.path(outdir, tx_file), row.names = F)  
+
 #### TODO: 
 # you should go to this CSV file and edit the final columns, 
 # take notes on decisions and create the updates list.  Save.
@@ -83,8 +86,9 @@ namelist <- c("visitcode","surveyyear", "',target_col,'")
 dat <- dat[,namelist]
 names(dat) <- gsub("update_to" , "',target_col,'", names(dat))
 str(dat)  
-```
+
 ', sep = "")
+#  ```
 #cat(txt)
 return(txt)
 

@@ -28,21 +28,32 @@ This is designed to create code snippets.  These can be used as standalone R scr
     ,
       show_header = T
     ,
-      show_geo = T  
+      show_geo = F
+    ,
+      minimal = T
+    ,
+      rmarkdown = !minimal
+    ,
+      show_eml = T
       ){
+  txt0 <- load_template()
   txt1 <- cleaning_template(datevar = "date")
   txt2 <- data_dictionary_template()
   txt3 <- taxonomic_template(target_col = "species")
-  txt <- paste(txt1, txt2, txt3)
+  txt <- paste(txt0, txt1, txt2, txt3)
   if(show_header){
-    hd <- header_template(titl=titl, projdir=projdir, packagedir=packagedir, outfile=outdir, indir=indir, infile=infile)
+    hd <- header_template(titl=titl, projdir=projdir, packagedir=packagedir, outfile=outfile, indir=indir, infile=infile)
     txt <- paste(hd, txt) 
   }
   if(show_geo){
     geo <- geographic_template(titl=titl, indir=indir)
     txt <- paste(txt, geo) 
   }
-  
+  if(show_eml){
+    eml <- eml_template()
+    txt <- paste(txt, eml) 
+  }
+    
   # cat(txt)
   
   return(txt)
@@ -51,33 +62,33 @@ This is designed to create code snippets.  These can be used as standalone R scr
 #+end_src
 *** test-exploratory_analysis_template
 #+name:exploratory_analysis_template
-#+begin_src R :session *R* :tangle tests/test-exploratory_analysis_template.r :exports none :eval no
+#+begin_src R :session *R* :tangle tests/test-exploratory_analysis_template.r :exports none :eval yes
   ################################################################
   # name:exploratory_analysis_template
   library(devtools)
   load_all()
-  textdata <- exploratory_analysis_template(
-    projdir = "~/tools/exploratory_analysis_template"
-  ,
-    packagedir =  "tests"
-  ,
-    outfile = "test_eda.csv"
-  ,
-    indir = "~/tools/exploratory_analysis_template/inst/extdata"
-  ,
-    infile = "taxonomic_dummy_data.csv"
-  ,
-    titl = "Testing taxonomic review code snippet"
-  ,
-    show_header = T
-  ,
-    show_geo = T
-    )
-  cat(textdata)
-  # check the codes, if ok sink to a r markdown script
-  sink("tests/test_taxo_review.Rmd")
-  cat(textdata)
-  sink()
+  ## textdata <- exploratory_analysis_template(
+  ##   projdir = "~/tools/exploratory_analysis_template"
+  ## ,
+  ##   packagedir =  "tests"
+  ## ,
+  ##   outfile = "test_eda.csv"
+  ## ,
+  ##   indir = "~/tools/exploratory_analysis_template/inst/extdata"
+  ## ,
+  ##   infile = "taxonomic_dummy_data.csv"
+  ## ,
+  ##   titl = "Testing taxonomic review code snippet"
+  ## ,
+  ##   show_header = T
+  ## ,
+  ##   show_geo = T
+  ##   )
+  ## cat(textdata)
+  ## # check the codes, if ok sink to a r markdown script
+  ## sink("tests/test_taxo_review.Rmd")
+  ## cat(textdata)
+  ## sink()
   
       textdata <- exploratory_analysis_template(
         projdir = "~/path/to/project",
@@ -86,9 +97,12 @@ This is designed to create code snippets.  These can be used as standalone R scr
         indir = "~/path/to/input/data",
         infile = "this_is_the_input_data.csv",
         titl = "Title of the code snippet",
-        show_header = TRUE)
+        show_header = TRUE, show_eml = TRUE)
       cat(textdata)
 #+end_src
+
+#+RESULTS: exploratory_analysis_template
+
 *** man-exploratory_analysis_template
 #+name:exploratory_analysis_template
 #+begin_src R :session *R* :tangle no :exports none :eval no
@@ -101,20 +115,27 @@ This is designed to create code snippets.  These can be used as standalone R scr
 #+name:header_template
 #+begin_src R :session *R* :tangle R/header_template.r :exports none :eval no
   ################################################################
-  header_template <- function(titl, projdir, packagedir, outfile, indir, infile){
+  header_template <- function(titl, projdir, packagedir, outfile, indir, infile, libraries = c("sqldf")){
+  #  ```{r echo = T, results = "asis", eval = T}
   hd <- sprintf('
+  "
   %s
   ---
+  "
   
-  ```{r echo = T, results = "asis", eval = T}
+  # Project: temp123
+  # Author: Your Name
+  # Maintainer: Who to complain to <yourfault@somewhere.net>
+  
+  #### Set any global variables here ####
   projdir <- "%s"
   outdir <- file.path(projdir, "%s")
   # if(!file.exists(outdir)) dir.create(outdir)
   outfile <- "%s"
   file.path(outdir, outfile) 
   setwd(outdir)
-  ```
-  ```{r, echo = TRUE, eval = FALSE}
+  
+  #### Load any needed libraries #### 
   library(gdata)
   library(disentangle)
   library(EML)
@@ -122,21 +143,13 @@ This is designed to create code snippets.  These can be used as standalone R scr
   library(taxize)
   indir <- "%s"
   
+  #### Identify your data inputs ####
   dir(indir)
   infile <- "%s"
   
-  #### load ####
-  print(file.path(indir,infile))
-  dat <- read.csv(file.path(indir,infile), stringsAsFactors = F)
-    
-  #### check ####
-  str(dat)
-  
-  head(dat) 
-  tail(dat)
-  ```
   ', titl, projdir, packagedir, outfile, indir, infile
   )
+  # ```
   return(hd)
   }
 #+end_src
@@ -155,16 +168,58 @@ This is designed to create code snippets.  These can be used as standalone R scr
 
 #+end_src
 
+** load_template
+*** R-load_template
+#+name:load_template
+#+begin_src R :session *R* :tangle R/load_template.r :exports none :eval no
+  ################################################################
+  load_template <- function(){
+  #   ```{r, echo = TRUE, eval = FALSE}
+  ld <- '
+  #### load ####
+  print(file.path(indir,infile))
+  dat <- read.csv(file.path(indir,infile), stringsAsFactors = F)
+      
+  #### check ####
+  str(dat)
+  # write down the nrows and ncols here for future reference
+  head(dat) 
+  tail(dat)
+  summary(dat)
+  # lapply(dat, table)
+  '
+  # ```
+  return(ld)
+  }
+  
+#+end_src
+*** test-load_template
+#+name:load_template
+#+begin_src R :session *R* :tangle tests/test-load_template.r :exports none :eval no
+################################################################
+# name:load_template
+
+#+end_src
+*** man-load_template
+#+name:load_template
+#+begin_src R :session *R* :tangle no :exports none :eval no
+################################################################
+# name:load_template
+
+#+end_src
+
 ** cleaning_template
 *** R-cleaning_template
 #+name:cleaning_template
 #+begin_src R :session *R* :tangle R/cleaning_template.r :exports none :eval no
   ################################################################
   cleaning_template <- function(datevar = "date"){
+  #   ```{r echo = T, results = "asis", eval = F}
   txt <- paste('
-  ```{r echo = T, results = "asis", eval = F}
+
   #### clean ####
   names(dat) <- lcu(names(dat))    
+
   ## Dates
   # If you see a date variable need to change it (R reads CSV dates as text)
   # to first test the conversion just do one
@@ -173,17 +228,21 @@ This is designed to create code snippets.  These can be used as standalone R scr
   # if that worked then do the whole vector
   dat$',datevar,' <- as.Date(dat$',datevar,', format = "%d/%m/%Y")
   table(dat$',datevar,')
+
   ## nominal variables coded with integers
   # these can be coerced to character
   for(i in c("pqplot", "row", "column")){
     print(table(dat[,i]))
     dat[,i] <- as.character(dat[,i])
   }
+
   ## Species is a reserved word only allowed for lists of proper names
   # otherwise we use descriptor
   names(dat) <- gsub("species", "fauna_descriptor", names(dat))
   str(dat)
-  ```', sep = '')
+
+  ', sep = '')
+  # ```
   return(txt)
   }
   
@@ -211,11 +270,13 @@ This is designed to create code snippets.  These can be used as standalone R scr
 #+begin_src R :session *R* :tangle R/data_dictionary_template.r :exports none :eval no
     
   data_dictionary_template <- function(){
+  #   ```{r echo = T, results = "asis", eval = F}
+  # NB this may get out of sync with the current dataset, especially if species names columns are added, so the data dictionary that appears in the HTML report is always regenerated
+
   txt <- paste('
-  ```{r echo = T, results = "asis", eval = F}
+
   #### Data Dictionary ####
   ## do a data dictionary and add the variable names and types
-  # NB this may get out of sync with the current dataset, especially if species names columns are added, so the data dictionary that appears in the HTML report is always regenerated
   dd <- data_dictionary(show_levels = 20, dat)
   write.csv(dd, file.path(outdir, gsub(".csv","_data_dictionary.csv", outfile)), row.names = F)
   
@@ -229,6 +290,7 @@ This is designed to create code snippets.  These can be used as standalone R scr
   ")
   col_defs <- col_defs[col_defs$Variable != "",]
   col_defs
+
   ## the original names are treated as the labels.  To be expanded on during DDF
   variable_labels <- read.csv(file.path(indir,infile), nrows = 1, header = F, stringsAsFactors = F)
   variable_labels
@@ -242,8 +304,9 @@ This is designed to create code snippets.  These can be used as standalone R scr
   vl$depositor_response <- ""
   vl
   write.csv(vl, file.path(outdir, gsub(".csv","_variable_names_and_labels.csv", outfile)), row.names = F)
-  ```
+
   ', sep = '')
+  #   ```
   return(txt)
   }
   
@@ -263,52 +326,6 @@ This is designed to create code snippets.  These can be used as standalone R scr
 
 #+end_src
 
-** reshape_emplate
-*** R-reshape_emplate
-#+name:reshape_emplate
-#+begin_src R :session *R* :tangle R/reshape_emplate.r :exports none :eval no
-################################################################
-# name:reshape_emplate
-
-#+end_src
-*** test-reshape_emplate
-#+name:reshape_emplate
-#+begin_src R :session *R* :tangle tests/test-reshape_emplate.r :exports none :eval no
-################################################################
-# name:reshape_emplate
-
-#+end_src
-*** man-reshape_emplate
-#+name:reshape_emplate
-#+begin_src R :session *R* :tangle no :exports none :eval no
-################################################################
-# name:reshape_emplate
-
-#+end_src
-
-** visualisation_template
-*** R-visualisation_template
-#+name:visualisation_template
-#+begin_src R :session *R* :tangle R/visualisation_template.r :exports none :eval no
-################################################################
-# name:visualisation_template
-
-#+end_src
-*** test-visualisation_template
-#+name:visualisation_template
-#+begin_src R :session *R* :tangle tests/test-visualisation_template.r :exports none :eval no
-################################################################
-# name:visualisation_template
-
-#+end_src
-*** man-visualisation_template
-#+name:visualisation_template
-#+begin_src R :session *R* :tangle no :exports none :eval no
-################################################################
-# name:visualisation_template
-
-#+end_src
-
 ** taxonomic_review_template
 *** R-taxonomic_review_template
 #+name:taxonomic_review_template
@@ -317,20 +334,22 @@ This is designed to create code snippets.  These can be used as standalone R scr
   # name:taxonomic_review_template
   
   taxonomic_template <- function(target_col = "species"){
-    
+  #  ```{r echo = T, results = "asis", eval = F}    
   txt <- paste('
-  ```{r echo = T, results = "asis", eval = F}
+
   #### Taxonomic review ####
-  ## to just simply summarise the species names
+  ## If you just want simply summarise the species names
   # tx <- as.data.frame(table(dat$',target_col,'))
   # names(tx) <- c("',target_col,'", "Frequency")
   # write.csv(tx, file.path(outdir, gsub(".csv","_taxonomic_coverage.csv", outfile)), row.names = F)  
-  ## to use taxize to check the list do the following 
+
+  ## Alternately to use taxize to check the list do the following 
   tx <- as.data.frame(table(dat$',target_col,'))
   names(tx) <- c("',target_col,'", "Frequency")
   splist <- tx$',target_col,'
   sources <- gnr_datasources()
   #sources
+
   ## the following lists have been selected as likely to be reasonable in australia
   eol <- sources$id[sources$title == "EOL"]
   gbif_backbone <- sources$id[sources$title == "GBIF Backbone Taxonomy"]
@@ -351,6 +370,7 @@ This is designed to create code snippets.  These can be used as standalone R scr
   ## write out the result for clerical review
   tx_file <- gsub(".csv","_taxonomic_coverage.csv", outfile)
   write.csv(out3, file.path(outdir, tx_file), row.names = F)  
+
   #### TODO: 
   # you should go to this CSV file and edit the final columns, 
   # take notes on decisions and create the updates list.  Save.
@@ -397,8 +417,9 @@ This is designed to create code snippets.  These can be used as standalone R scr
   dat <- dat[,namelist]
   names(dat) <- gsub("update_to" , "',target_col,'", names(dat))
   str(dat)  
-  ```
+
   ', sep = "")
+  #  ```
   #cat(txt)
   return(txt)
   
@@ -511,6 +532,48 @@ This is designed to create code snippets.  These can be used as standalone R scr
   dat
   
 #+end_src
+** eml_template
+*** R-eml_template
+#+name:eml_template
+#+begin_src R :session *R* :tangle R/eml_template.r :exports none :eval no
+################################################################
+eml_template <- function(){
+txt <- sprintf('
+unit_defs <- reml_boilerplate(dat, enumerated = NA)
+col_defs <- names(dat)
+ds <- eml_dataTable(dat,
+              col.defs = col_defs,
+              unit.defs = unit_defs,
+              description = "TBA", 
+              filename = "%s")
+# now write EML metadata file
+eml_config(creator="Antonio Gasparrini
+<antonio.gasparrini@lshtm.ac.uk>")
+eml_write(ds,
+          file = "%s",
+          title = "TBA"
+)
+', outfile, gsub(".csv", ".xml", outfile)
+)
+
+return(txt)
+}
+
+#+end_src
+*** test-eml_template
+#+name:eml_template
+#+begin_src R :session *R* :tangle tests/test-eml_template.r :exports none :eval no
+################################################################
+# name:eml_template
+
+#+end_src
+*** man-eml_template
+#+name:eml_template
+#+begin_src R :session *R* :tangle no :exports none :eval no
+################################################################
+# name:eml_template
+
+#+end_src
 ** geographic_template
 *** R-geographic_template
 #+name:geographic_template
@@ -580,25 +643,49 @@ This is designed to create code snippets.  These can be used as standalone R scr
 # name:geographic_template
 
 #+end_src
-** eml_template
-*** R-eml_template
-#+name:eml_template
-#+begin_src R :session *R* :tangle R/eml_template.r :exports none :eval no
+
+** reshape_template
+*** R-reshape_emplate
+#+name:reshape_emplate
+#+begin_src R :session *R* :tangle R/reshape_emplate.r :exports none :eval no
 ################################################################
-# name:eml_template
+# name:reshape_emplate
 
 #+end_src
-*** test-eml_template
-#+name:eml_template
-#+begin_src R :session *R* :tangle tests/test-eml_template.r :exports none :eval no
+*** test-reshape_emplate
+#+name:reshape_emplate
+#+begin_src R :session *R* :tangle tests/test-reshape_emplate.r :exports none :eval no
 ################################################################
-# name:eml_template
+# name:reshape_emplate
 
 #+end_src
-*** man-eml_template
-#+name:eml_template
+*** man-reshape_emplate
+#+name:reshape_emplate
 #+begin_src R :session *R* :tangle no :exports none :eval no
 ################################################################
-# name:eml_template
+# name:reshape_emplate
+
+#+end_src
+
+** visualisation_template
+*** R-visualisation_template
+#+name:visualisation_template
+#+begin_src R :session *R* :tangle R/visualisation_template.r :exports none :eval no
+################################################################
+# name:visualisation_template
+
+#+end_src
+*** test-visualisation_template
+#+name:visualisation_template
+#+begin_src R :session *R* :tangle tests/test-visualisation_template.r :exports none :eval no
+################################################################
+# name:visualisation_template
+
+#+end_src
+*** man-visualisation_template
+#+name:visualisation_template
+#+begin_src R :session *R* :tangle no :exports none :eval no
+################################################################
+# name:visualisation_template
 
 #+end_src
