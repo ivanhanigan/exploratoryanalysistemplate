@@ -537,7 +537,7 @@ This is designed to create code snippets.  These can be used as standalone R scr
 #+name:eml_template
 #+begin_src R :session *R* :tangle R/eml_template.r :exports none :eval no
   ################################################################
-  eml_template <- function(outfile=outfile){
+  eml_template <- function(outfile){
   txt <- sprintf('
 
   #### Write out a CSV and an EML file ####
