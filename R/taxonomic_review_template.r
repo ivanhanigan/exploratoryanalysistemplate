@@ -56,7 +56,7 @@ str(dat)
 
 # check that linking variable is identical
 # there are a variety of reasons why these may have gotten out of sync during the clerical review
-idx <- as.data.frame(names(table(dat$",target_col,")))
+idx <- as.data.frame(names(table(dat$"',target_col,'")))
 names(idx) <- "v1"
 head(idx)
 idy <- as.data.frame(tx$submitted_name)
