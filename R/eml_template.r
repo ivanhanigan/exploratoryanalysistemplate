@@ -1,6 +1,6 @@
 
 ################################################################
-eml_template <- function(){
+eml_template <- function(outfile=outfile){
 txt <- sprintf('
 
 #### Write out a CSV and an EML file ####
