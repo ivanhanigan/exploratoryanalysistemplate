@@ -37,7 +37,7 @@ if(show_geo){
   txt <- paste(txt, geo) 
 }
 if(show_eml){
-  eml <- eml_template()
+  eml <- eml_template(outfile=outfile)
   txt <- paste(txt, eml) 
 }
   
