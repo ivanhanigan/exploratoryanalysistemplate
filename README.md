@@ -5,7 +5,7 @@ This is designed to create code snippets.  These can be used as standalone R scr
 
 #### To install
     library(devtools)
-    install_bitbucket(repo = "exploratoryanalysistemplate", username = "asn-ltern")
+    install_github(repo = "exploratoryanalysistemplate", username = "ivanhanigan")
     
     
 #### To use
